@@ -6,6 +6,7 @@ from itertools import compress
 KEEP_LABELS = ['automobile', 'bird', 'cat', 'deer', 'dog', 'horse', 'truck']
 LABELS_PATH = "data/original/cifar-10-batches-py/batches.meta"
 GENERAL_BATCH_PATH = "data/original/cifar-10-batches-py/data_batch_"
+TEST_DATA_PATH = "data/original/cifar-10-batches-py/test_batch"
 NUMBER_OF_BATCHES = 5
 
 def unpickle(file, number_of_batches):
@@ -49,11 +50,17 @@ def test_filtered_data(data, labels_dict, labels_to_keep):
     # we have the right number of elements 
     assert(len(data.get(b'data')) == len(data.get(b'labels')) == len(data.get(b'filenames'))), "fields out of sync"
 
-labels_path = "data/original/cifar-10-batches-py/batches.meta"
-general_batch_path = GENERAL_BATCH_PATH
+def generate_set():
+    labels = generate_labels(LABELS_PATH)
+    data = unpickle(GENERAL_BATCH_PATH, NUMBER_OF_BATCHES)
+    filtered_data = filter_data(data, labels, KEEP_LABELS)
+    test_filtered_data(filtered_data, labels, KEEP_LABELS)
+    return filtered_data
 
-LABELS = generate_labels(labels_path)
-
-original_data = unpickle(general_batch_path, NUMBER_OF_BATCHES)
-filtered_data = filter_data(original_data, LABELS, KEEP_LABELS)
-test_filtered_data(filtered_data, LABELS, KEEP_LABELS)
+def generate_test_set():
+    labels = generate_labels(LABELS_PATH)
+    with open(TEST_DATA_PATH, 'rb') as fo:
+        data = pickle.load(fo, encoding='bytes')
+    filtered_data = filter_data(data, labels, KEEP_LABELS)
+    test_filtered_data(filtered_data, labels, KEEP_LABELS)
+    return filtered_data
