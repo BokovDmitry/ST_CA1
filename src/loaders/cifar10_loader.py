@@ -29,11 +29,12 @@ def load_batches(prefix, count):
 
 def filter_data(data, label_names):
     original_labels = data[b'labels']
-    target_labels = [CLASS_TO_ID[label_names[label]] for label in original_labels]
-    mask = np.isin(target_labels, [CLASS_TO_ID[label] for label in KEEP_LABELS])
+    original_names = [label_names[label] for label in original_labels]
+    mask = np.isin(original_names, KEEP_LABELS)
+    target_labels = [CLASS_TO_ID[name] for name, keep in zip(original_names, mask) if keep]
     filtered = {
         'data': data[b'data'][mask],
-        'labels': np.asarray(target_labels)[mask],
+        'labels': np.asarray(target_labels),
         'filenames': [name for name, keep in zip(data[b'filenames'], mask) if keep],
     }
     validate_data(filtered, KEEP_LABELS)
