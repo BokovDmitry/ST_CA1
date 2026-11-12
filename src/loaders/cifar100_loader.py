@@ -1,58 +1,73 @@
 import pickle
+from pathlib import Path
+
 import numpy as np
-import matplotlib.pyplot as plt
-from itertools import compress
 
-KEEP_LABELS = ['cattle', 'fox', 'baby', 'boy', 'girl', 'man', 'woman', 'rabbit', 'squirrel', 'bicycle', 'bus', 'motorcycle', 'pickup_truck', 'train', 'lawn_mower', 'tractor']
-KEEP_SUPERCLASS = ['trees']
-META_PATH = "data/original/cifar-100-python/meta"
-TRAIN_DATA_PATH = "data/original/cifar-100-python/train"
-TEST_DATA_PATH = "data/original/cifar-100-python/test"
+from .class_names import CLASS_TO_ID
 
-def unpickle(file):
-    with open(file, 'rb') as fo:
-        dict = pickle.load(fo, encoding='bytes')
-    return dict
+KEEP_LABELS = (
+    'cattle', 'fox', 'baby', 'boy', 'girl', 'man', 'woman', 'rabbit',
+    'squirrel', 'bicycle', 'bus', 'motorcycle', 'pickup_truck', 'train',
+    'lawn_mower', 'tractor',
+)
+KEEP_SUPERCLASSES = ('trees',)
+DATA_DIR = Path(__file__).resolve().parents[2] / 'data/original/cifar-100-python'
+META_PATH = DATA_DIR / 'meta'
+TRAIN_DATA_PATH = DATA_DIR / 'train'
+TEST_DATA_PATH = DATA_DIR / 'test'
 
-def generate_labels(path, label_key):
-    with open(path, 'rb') as fo:
-        labels_dict = pickle.load(fo, encoding='bytes')
-    labels = {}
-    for i, label in enumerate(labels_dict[label_key]):
-        labels[i] = label.decode('utf-8')
 
-    return labels
+def load_pickle(path):
+    with open(path, 'rb') as file:
+        return pickle.load(file, encoding='bytes')
 
-def filter_data(data, labels_dict, superclass_dict, labels_to_keep, superclass_to_keep):
-    keep_labels = [key for key, value in labels_dict.items() if value in labels_to_keep]
-    keep_superclass = [key for key, value in superclass_dict.items() if value in superclass_to_keep]
-    mask = np.isin(data[b'fine_labels'], keep_labels) | np.isin(data[b'coarse_labels'], keep_superclass)
-    return {
-        b'data':        data[b'data'][mask],
-        b'fine_labels': list(compress(data[b'fine_labels'], mask)),
-        b'coarse_labels': list(compress(data[b'coarse_labels'], mask)),
-        b'filenames':   list(compress(data[b'filenames'], mask)),
+
+def filter_data(data, fine_names, coarse_names):
+    fine_labels = data[b'fine_labels']
+    coarse_labels = data[b'coarse_labels']
+    target_labels = []
+    keep_mask = []
+
+    for fine_id, coarse_id in zip(fine_labels, coarse_labels):
+        fine_name = fine_names[fine_id]
+        coarse_name = coarse_names[coarse_id]
+        if fine_name in KEEP_LABELS:
+            target_labels.append(CLASS_TO_ID[fine_name])
+            keep_mask.append(True)
+        elif coarse_name in KEEP_SUPERCLASSES:
+            target_labels.append(CLASS_TO_ID[coarse_name])
+            keep_mask.append(True)
+        else:
+            target_labels.append(-1)
+            keep_mask.append(False)
+
+    mask = np.asarray(keep_mask)
+    filtered = {
+        'data': data[b'data'][mask],
+        'labels': np.asarray(target_labels)[mask],
+        'filenames': [name for name, keep in zip(data[b'filenames'], mask) if keep],
     }
+    validate_data(filtered)
+    return filtered
 
-def test_filtered_data(data, labels_dict, superclass_dict, labels_to_keep, superclass_to_keep):
-    keep_labels = [key for key, value in labels_dict.items() if value in labels_to_keep]
-    keep_superclass = [key for key, value in superclass_dict.items() if value in superclass_to_keep]
-    assert(all(fine in keep_labels or coarse in keep_superclass for fine, coarse in zip(data[b'fine_labels'], data[b'coarse_labels']))), "unexpected label or superclass"
-    # we have the right number of elements 
-    assert(len(data.get(b'data')) == len(data.get(b'fine_labels')) == len(data.get(b'filenames')) == len(data.get(b'coarse_labels'))), "fields out of sync"
+
+def validate_data(data):
+    assert len(data['data']) == len(data['labels']) == len(data['filenames']), 'fields out of sync'
+    allowed_ids = {CLASS_TO_ID[label] for label in (*KEEP_LABELS, *KEEP_SUPERCLASSES)}
+    assert set(np.unique(data['labels'])).issubset(allowed_ids), 'unexpected label or superclass'
+
+
+def _generate_set(path):
+    data = load_pickle(path)
+    metadata = load_pickle(META_PATH)
+    fine_names = [name.decode('utf-8') for name in metadata[b'fine_label_names']]
+    coarse_names = [name.decode('utf-8') for name in metadata[b'coarse_label_names']]
+    return filter_data(data, fine_names, coarse_names)
+
 
 def generate_set():
-    data = unpickle(TRAIN_DATA_PATH)
-    labels = generate_labels(META_PATH, b'fine_label_names')
-    superclasses = generate_labels(META_PATH, b'coarse_label_names')
-    filtered_data = filter_data(data, labels, superclasses, KEEP_LABELS, KEEP_SUPERCLASS)
-    test_filtered_data(filtered_data, labels, superclasses, KEEP_LABELS, KEEP_SUPERCLASS)
-    return filtered_data
+    return _generate_set(TRAIN_DATA_PATH)
+
 
 def generate_test_set():
-    data = unpickle(TEST_DATA_PATH)
-    labels = generate_labels(META_PATH, b'fine_label_names')
-    superclasses = generate_labels(META_PATH, b'coarse_label_names')
-    filtered_data = filter_data(data, labels, superclasses, KEEP_LABELS, KEEP_SUPERCLASS)
-    test_filtered_data(filtered_data, labels, superclasses, KEEP_LABELS, KEEP_SUPERCLASS)
-    return filtered_data
+    return _generate_set(TEST_DATA_PATH)
