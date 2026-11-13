@@ -2,6 +2,7 @@ from src.loaders import cifar10_loader as cf10
 from src.loaders import cifar100_loader as cf100
 from src import formatter
 from src import preprocessor
+from src import splitter
 
 def main():
     cf10_train = cf10.generate_set()
@@ -17,8 +18,10 @@ def main():
     merged_test_set = formatter.format_sets(cf10_test, cf100_test)
     final_test_set = preprocessor.apply_preprocessing(merged_test_set)
 
-    print(f"Train: {len(final_training_set['labels'])}")
-    print(f"Test: {len(final_test_set['labels'])}")
+    X_train, y_train, X_val, y_val = splitter.split_validation_set(final_training_set)
+    X_test, y_test = final_test_set['data'], final_test_set['labels']
+
+    print(f"Train: {X_train.shape}  Val: {X_val.shape}  Test: {X_test.shape}")
 
 if __name__ == "__main__":
     main()
