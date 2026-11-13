@@ -5,6 +5,8 @@ from src import formatter
 from src import preprocessor
 from src import splitter
 from src import explorer
+from src import trainer
+from src.model import LeNet_model
 
 def main():
     num_classes = len(CLASS_NAMES)
@@ -37,6 +39,10 @@ def main():
     y_train, y_val, y_test = formatter.one_hot_encode(num_classes, y_train, y_val, y_test)
 
     print(f"After preprocessing - Train: {X_train.shape}  Val: {X_val.shape}  Test: {X_test.shape}")
+
+    model = LeNet_model(num_classes)
+    print(model.summary())
+    trainer.evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test)
 
 if __name__ == "__main__":
     main()

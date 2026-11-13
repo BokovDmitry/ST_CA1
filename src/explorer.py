@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src.loaders import cifar100_loader as cf100
 from src.loaders.class_names import CLASS_NAMES
 
 
