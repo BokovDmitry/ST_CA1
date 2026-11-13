@@ -11,15 +11,14 @@ def main():
 
     final_training_set = preprocessor.apply_preprocessing(merged_training_set)
 
-    # cf10_test = cf10.generate_test_set()
-    # cf100_test = cf100.generate_test_set()
+    cf10_test = cf10.generate_test_set()
+    cf100_test = cf100.generate_test_set()
 
-    # merged_test_set = formatter.merge_sets(cf10_test, cf100_test)
-
-
+    merged_test_set = formatter.format_sets(cf10_test, cf100_test)
+    final_test_set = preprocessor.apply_preprocessing(merged_test_set)
 
     print(f"Train: {len(final_training_set['labels'])}")
-    # print(f"Test: {len(merged_test_set['labels'])}")
+    print(f"Test: {len(final_test_set['labels'])}")
 
 if __name__ == "__main__":
     main()
