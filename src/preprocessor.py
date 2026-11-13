@@ -2,13 +2,9 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-def apply_preprocessing(data):
-    X_train = data['data']
-    X_train = np.array(list(map(preprocessing, X_train)))
-    X_train = reshape_images_for_cnn(X_train)
-    examine_random_training_image_after_preprocessing(X_train)
-    data['data'] = X_train
-    return data
+def apply_preprocessing(images):
+    images = np.array(list(map(preprocessing, images)))
+    return reshape_images_for_cnn(images)
 
 def preprocessing(img):
     img = grayscale(img)
